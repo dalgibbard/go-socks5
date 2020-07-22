@@ -2,7 +2,6 @@ package socks5
 
 import (
 	"net"
-
 	"golang.org/x/net/context"
 )
 

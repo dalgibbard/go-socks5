@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"os"
-
 	"golang.org/x/net/context"
 )
 
@@ -154,12 +153,8 @@ func (s *Server) ServeConn(conn net.Conn) error {
 		return fmt.Errorf("Failed to read destination address: %v", err)
 	}
 	request.AuthContext = authContext
-	if client, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
-		if client.Port == 443 {
-			request.RemoteAddr = &AddrSpec{IP: "localhost", Port: 8443}
-		} else {
-			request.RemoteAddr = &AddrSpec{IP: "localhost", Port: 8080}
-		}
+	if _, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+			request.RemoteAddr = &AddrSpec{IP: net.IP("127.0.0.1"), Port: 8080}
 	}
 
 	// Process the client request

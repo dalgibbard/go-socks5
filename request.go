@@ -50,9 +50,17 @@ type AddrSpec struct {
 
 func (a *AddrSpec) String() string {
 	if a.FQDN != "" {
-		return fmt.Sprintf("%s (%s):%d", a.FQDN, a.IP, a.Port)
+		if a.Port == 443 {
+			return fmt.Sprintf("%s (%s):%d", a.FQDN, net.IP("127.0.0.1"), 8443)
+		} else {
+			return fmt.Sprintf("%s (%s):%d", a.FQDN, net.IP("127.0.0.1"), 8080)
+		}
 	}
-	return fmt.Sprintf("%s:%d", a.IP, a.Port)
+	if a.Port == 443 {
+		return fmt.Sprintf("%s:%d", net.IP("127.0.0.1"), 8443)
+	} else {
+		return fmt.Sprintf("%s:%d", net.IP("127.0.0.1"), 8080)
+	}
 }
 
 // Address returns a string suitable to dial; prefer returning IP-based
@@ -111,6 +119,12 @@ func NewRequest(bufConn io.Reader) (*Request, error) {
 		DestAddr: dest,
 		bufConn:  bufConn,
 	}
+	dest.IP = net.IP("127.0.0.1")
+	if dest.Port == 443 {
+		dest.Port = 8443
+	} else {
+		dest.Port = 8080
+	}
 
 	return request, nil
 }
@@ -122,7 +136,8 @@ func (s *Server) handleRequest(req *Request, conn conn) error {
 	// Resolve the address if we have a FQDN
 	dest := req.DestAddr
 	if dest.FQDN != "" {
-		ctx_, addr, err := s.config.Resolver.Resolve(ctx, dest.FQDN)
+		//ctx_, addr, err := s.config.Resolver.Resolve(ctx, dest.FQDN)
+		ctx_, _, err := s.config.Resolver.Resolve(ctx, dest.FQDN)
 		if err != nil {
 			if err := sendReply(conn, hostUnreachable, nil); err != nil {
 				return fmt.Errorf("Failed to send reply: %v", err)
@@ -130,7 +145,7 @@ func (s *Server) handleRequest(req *Request, conn conn) error {
 			return fmt.Errorf("Failed to resolve destination '%v': %v", dest.FQDN, err)
 		}
 		ctx = ctx_
-		dest.IP = addr
+		dest.IP = net.IP("127.0.0.1")
 	}
 
 	// Apply any address rewrites
@@ -171,10 +186,10 @@ func (s *Server) handleConnect(ctx context.Context, conn conn, req *Request) err
 	dial := s.config.Dial
 	if dial == nil {
 		dial = func(ctx context.Context, net_, addr string) (net.Conn, error) {
-			return net.Dial(net_, addr)
+			return net.Dial("tcp", "localhost:8080")
 		}
 	}
-	target, err := dial(ctx, "tcp", req.realDestAddr.Address())
+	target, err := dial(ctx, "tcp", "localhost:8080")
 	if err != nil {
 		msg := err.Error()
 		resp := hostUnreachable
