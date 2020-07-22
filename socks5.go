@@ -155,7 +155,11 @@ func (s *Server) ServeConn(conn net.Conn) error {
 	}
 	request.AuthContext = authContext
 	if client, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
-		request.RemoteAddr = &AddrSpec{IP: client.IP, Port: client.Port}
+		if client.Port == 443 {
+			request.RemoteAddr = &AddrSpec{IP: "localhost", Port: 8443}
+		} else {
+			request.RemoteAddr = &AddrSpec{IP: "localhost", Port: 8080}
+		}
 	}
 
 	// Process the client request
